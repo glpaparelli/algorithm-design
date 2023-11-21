@@ -717,14 +717,16 @@ So we have $P(h_i(x) \ne q) = 1 - P(h_i(x) = q) = 1 - \frac{1}{m}$
 Alternatively said: $P(B[q] = 0\ |\ h_i\ \text{is chosen}) = 1 - \frac{1}{m}$ 
 
 **step 3)**
-Let's relax the previous step by removing the fixated $i$-th hash function: $$
-\begin{align}
+Let's relax the previous step by removing the fixated $i$-th hash function:  
+$$\begin{align}
 P(B[q]=0) &= \\
-&= P(\text{all the $k$ hash functions do not give q}) \\
+&= P(\text{all the $k$ hash functions do not give q})\\
 &= (1-\frac{1}{m})^k
 \end{align}
-$$**step 4)**
-We relax the previous step: we apply the same reasoning for all the keys in $S$$$P(B[q] = 0) = [(1-\frac{1}{m})^k]^n$$**step 5)** 
+$$
+**step 4)**
+We relax the previous step: we apply the same reasoning for all the keys in $S$$$P(B[q] = 0) = [(1-\frac{1}{m})^k]^n$$
+**step 5)** 
 We can apply the result of **step 4)** in the equation of **step 1)**
 $$
 \begin{align}
@@ -739,7 +741,8 @@ $$f = P(\text{error}) = P(x\notin S\ \text{but $\diamondsuit$ is true}) = (1 - p
 ## Choosing the Best Parameters
 We want to **minimize** the failure probability $f = (1-p')^k$, where $p' = (1-\frac{1}{m})^{nk}$
 Remember the Taylor expansion: $(1+y)\sim e^y$ for small $y$. 
-Then we can write$$p' = (1-\frac{1}{m})^{nk} \sim_{y =\frac{1}{m}} (e^{-\frac{1}{m}})^{nk} = e^{-\frac{nk}{m}} = p$$So we now try to minimize $(1-p)^k$, using the logarithm to both sides of the equation:
+Then we can write$$p' = (1-\frac{1}{m})^{nk} \sim_{y =\frac{1}{m}} (e^{-\frac{1}{m}})^{nk} = e^{-\frac{nk}{m}} = p$$
+So we now try to minimize $(1-p)^k$, using the logarithm to both sides of the equation:
 $$
 \begin{align}
 &1) \log(1-p)^k = k\log(1-p) \\
@@ -811,13 +814,15 @@ Let's say that $b'$ is the number of bits required by $D'$.
 Then we have that $D = D' +\ \text{extra bits to mark correct answers from}\ D'$
 So we get an exact dictionary $D$, and then it must require at least $\log\binom{m}{n}$ by IT. 
 
-So we have: $$
+So we have: 
+$$
 \begin{align}
 &|D| \geq \log\binom{m}{n},\ \text{by IT}\\
 &|D' +\text{extra bits}| \geq \log\binom{m}{n},\ \text{as $D'$+\ extra bits is a dictionary for $S$}
 \end{align}
-$$If we look closely we see that 
-$$|D' +\text{extra bits}| = |D'|+ \clubsuit \log\binom{|S'|}{|S|}\ \bigstar$$$\clubsuit:$ number of bits we need to mark $D'(x)$ to make it an exact dictionary
+$$
+If we look closely we see that $$|D' +\text{extra bits}| = |D'|+ \clubsuit \log\binom{|S'|}{|S|}\ \bigstar$$
+$\clubsuit:$ number of bits we need to mark $D'(x)$ to make it an exact dictionary
 
 We then remember the initial assumptions: $$\begin{align}
 |S'| &= \\
@@ -835,23 +840,32 @@ $$
 &= b'+\log\binom{n+fm}{n}
 \end{align}
 $$
-**Putting things together:** $$
+
+**Putting things together:** 
+$$
 \begin{align}
-b'+ \log\binom{n+fm}{n} \ge \log\binom{m}{n} &= \\
-&= b' \ge \log\binom{m}{n} - \log\binom{n+fm}{n} \\
-&\sim  b'\ge n\log(\frac{m}{n}) -n\log(\frac{n+fm}{n})\ \nabla \\
-&\sim b' \ge n\log(\frac{m}{n}) -n\log(\frac{fm}{n})\ \star \\
-&= b' \ge n(\log(\frac{m}{n})-\log(\frac{fm}{n})) \\
-&=b' \ge n(\log(\frac{m}{n})+\log(\frac{n}{fm}))\\ 
-&= b' \ge n(\log(\frac{m}{n}\cdot\frac{n}{fm})) \\
-&= b' \ge n\log(\frac{1}{f})\ \square
+	b'+ \log\binom{n+fm}{n} \ge \log\binom{m}{n} &= \\
+	&= b' \ge \log\binom{m}{n} - \log\binom{n+fm}{n} \\
+	&\sim  b'\ge n\log(\frac{m}{n}) -n\log(\frac{n+fm}{n})\ \nabla \\
+	&\sim b' \ge n\log(\frac{m}{n}) -n\log(\frac{fm}{n})\ \star \\
+	&= b' \ge n(\log(\frac{m}{n})-\log(\frac{fm}{n})) \\
+	&=b' \ge n(\log(\frac{m}{n})+\log(\frac{n}{fm}))\\ 
+	&= b' \ge n(\log(\frac{m}{n}\cdot\frac{n}{fm})) \\
+	&= b' \ge n\log(\frac{1}{f})\ \square
 \end{align}
-$$Where: 
+$$
+Where: 
 - $\nabla:$ $\log\binom{m}{n} \sim n\log(\frac{m}{n})$
 - $\star:$ $\log(\frac{n+fm}{n}) \sim \log(\frac{fm}{n})$ as $\frac{n+fm}{n} = 1 + \frac{fm}{n}$
-
 **We proved the lower bound.**
 ## Upper Bound
-(Succinct Rand DS)
-*I skip this part, too hard and boring.* 
+The **upper bounds** for the membership problem: 
+1) time: $O(1)$ with $1$ hash function:
+	- We use a Succinct **Rank** Data Structure: bit-vector, $m$ bits with $n$ of them $=$ $1$
+		- constant-time lookup 
+		- space complexity $\log\binom{m}{n} +\ \text{lower order terms}$ 
+2) space: $n/f$ 
+
+*This section is sloppy and non-complete as it was not explained during the lectures, it was delegated to personal studying, I do not care.*
 # Load Balancing
+
