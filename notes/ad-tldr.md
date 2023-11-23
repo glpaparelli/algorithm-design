@@ -1,6 +1,5 @@
 # <p style="text-align:center;">Algorithm Design</p>
-<p style="text-align:center;">Giulio Paparelli, AY 22/23</p>
-<p style="text-align:center;"><b>Use at Your Own Risk</b></p>
+<p style="text-align:center;">Giulio Paparelli, AY 22/23 <br> <b>Use at Your Own Risk</b></p>
 
 ## Mathematical Background
 ### Counting
@@ -1117,4 +1116,91 @@ Which is good, $\square$
 
 *the application of this technique, the network analysis, is skipped.*
 # Count-Min Sketches for Frequent Elements
-**TODO**
+Consider a stream (possibly infinite) $a_0, \dots$ of elements $\in U$. 
+We want to know how many times a given element $a$ has appeared so far in the stream. 
+Let's define a frequency array $F$ such that:
+$$F[a] = \text{number of times $a$ is appeared so far}$$
+The point is that $||F|| = \Sigma_{a\in U}F[a]$ is not computable when $U$ is huge, we do not have enough memory. 
+
+Then we set the two following goals: 
+1) small space occupation
+2) two user-defined parameters: 
+	- $\delta$, the error probability
+	- $\varepsilon$, we cannot compute $F[]$ exactly so we give an $\varepsilon$-approximation
+
+To do so we use the **count-min skectch**. 
+We set: 
+- $|U| = n$
+- update of the frequency array: $F[i$]++ for every $i \in [n]$
+- query: return $F[i]$
+- $||F|| = \Sigma_{a\in U}F[a]$
+
+And, given $\varepsilon, \delta$ we estimate $F_\sim[i]$ such that 
+$$
+F[i]\le F_\sim[i]\le F[i]+\varepsilon||F||
+$$
+where $F_\sim[i]\le F[i]+\varepsilon||F||$ holds with a probability $1-\delta$. 
+The problem is that if $F[i]$ is small compared to $\varepsilon||F||$ the estimation is useless. 
+
+**CM-Sketch is a sort of Bloom Filters with Counters**. 
+Given the input $\varepsilon$ and $\delta$ we built a table $T = r\times c$, where: 
+- $r$ are the rows, $r = \log(\delta^{-1})$
+- $c$ are the columns, $c = \frac{e}{\varepsilon}$
+
+**Each entry of the table is a counter and it is initialized to $0$.** 
+Choose uniformly and randomly $h_0,\dots,h_{r-1}\in \mathcal{H}$ where $\mathcal{H}$ is a two-way independent universal hash family, where $m = c$.
+The item $i\in U$ of the stream is associated with the entries of $T$ at positions $$\{\langle0, h_0(i)\rangle,\dots, \langle r-1, h_{r-1}(i)\rangle\}$$
+Then we have the two operations, both costing $O(r)$: 
+- a new element $i$ is seen: $F[i]$++ $= T[0][h_0(i)]$++$,\dots, T[r-1][h_{r-1}(i)]$++
+- how many times $i$ has been seen: return $F_\sim[i] = \text{min}\star(T[0][h_0(i)],\dots,T[r-1][h_{r-1}(i)])$ 
+
+**Issue:** $F_\sim[i]\ge F[i]$ by construction, but it could be too large! 
+Let $j$ be the row that gives the minimum $(\star)$: 
+$$F_\sim[i]= T[j][h_j(i)] = F[i]+ X_{ji}$$
+Where $X_{ji}$ is "garbage" due to the updates $F[k]$++ of other $k \ne i$.
+$X_{ji}$ is the increasing (w.r.t $F[i]$) that the cell $T[ j ] [h_j(i)]$ had due to the collision, for elements $k\ne i$, in the computation of $h_j(i)$. 
+Since, if this collision $h_j(i) = h_j(k)$ happen, it happens all the time we see $k$, we have an error equal to the times we have seen $k$, hence $F[k]$ times.
+More specifically: 
+$$X_{ji}=\Sigma_{k\ne i\land h_j(i)=h_j(k)}\ F[k] = \Sigma_{k=1}^n\ I_{jik}\cdot F[k]$$
+where $I_{jik}$ is an indicator variable
+$$
+I_{jik}=\begin{cases}
+1\ \text{if}\ h_j(i) = h_j(k),\ \text{with}\  k\ne i\\
+0\ \text{otherwise}
+\end{cases}
+$$
+that is *true* if a collision did happen.
+
+**We want to show:** $P(X_{ji}> \varepsilon||F||) < \delta$ $\bigstar$ 
+We then compute: $$E[I_{jik}] = P(X_{jik} = 1) = \frac{1}{c} =_{c=\frac{e}{\varepsilon}} \frac{\varepsilon}{e}$$and use it to compute the expected value of $X_{ji}$
+$$
+\begin{align}
+E[X_{ji}] &= \\
+&= \Sigma_{k=1}^n\ E[I_{jik}]\cdot F[k] \\
+&= \Sigma_{k=1}^n\ \frac{\varepsilon}{e}\cdot F[k] \\
+&= \frac{\varepsilon}{e}\cdot ||F||\ \diamondsuit
+\end{align}
+$$
+$\diamondsuit$ is obtained by the facts that:
+- $k$ do not appear in $\frac{\varepsilon}{e}$
+- $||F|| = \Sigma_{k=1}^n F[k]$ by definition
+
+From $\diamondsuit$ we get that: $$e\cdot E[X_{ji}] = \varepsilon||F||$$We can then apply the **Markov's Inequality:** $P(X > z)\le \frac{E[X]}{z}$
+In this case we set: 
+- $z = \varepsilon||F||$
+- $X = X_{ji}$
+
+And we get: 
+$$P(X_{ji}> \varepsilon||F||) \le_{MI} \frac{E[X_{ji}]}{\varepsilon||F||} = \frac{E[X_{ji}]}{e\cdot E[X_{ji}]} = \frac{1}{e}\ \clubsuit$$
+And we are done: 
+$$
+\begin{align}
+P(F_\sim[i]> F[i]+\varepsilon||F||) &= \\
+&=P(\forall j: P(X_{ji}>\varepsilon||F||))\ \heartsuit \\
+&\le \Pi_{j=1}^r \frac{1}{e},\ \text{as $h_j$ are independently chosen, and $\clubsuit$} \\
+&= \frac{1}{e^r}\\ 
+&= \delta,\ \text{as $\delta = \log(\frac{1}{\delta})$ by def} 
+\end{align}
+$$
+$\heartsuit$: $F_\sim[i]$ is a minimum operation over the rows of $T$: it has to be verified for every cell!
+which proves $\bigstar$, $\square$ 
