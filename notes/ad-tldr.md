@@ -777,7 +777,7 @@ $$
 \end{align}
 $$
 **We have computed both the time and space complexity of BF.** 
-# Approximate Dictionary: Succinct Rank DS
+# Approximate Dictionary
 Consider a set $S$ of $n$ keys chosen from a universe $U$. 
 For a given ($1$-side) error probability $0 < f < 1$, we learned that Bloom Filters achieve probability $f$ using $k \sim \frac{m}{n}\log(2)$ hash functions that map $U \rightarrow [m]$. 
 They take $O(k)$ time and use nearly $1.44\cdot n\log(1/f)$ bits of space
@@ -857,6 +857,7 @@ $$
 Where: 
 - $\nabla:$ $\log\binom{m}{n} \sim n\log(\frac{m}{n})$
 - $\star:$ $\log(\frac{n+fm}{n}) \sim \log(\frac{fm}{n})$ as $\frac{n+fm}{n} = 1 + \frac{fm}{n}$
+
 **We proved the lower bound.**
 ## Upper Bound
 The **upper bounds** for the membership problem: 
@@ -867,5 +868,173 @@ The **upper bounds** for the membership problem:
 2) space: $n/f$ 
 
 *This section is sloppy and non-complete as it was not explained during the lectures, it was delegated to personal studying, I do not care.*
+# Chebyshev's Inequality (CI)
+In probability theory, Chebyshev's inequality **guarantees that no more than a certain fraction of values can be more than a certain distance from the mean.**
+**Let's remember the variance** 
+$$\sigma^2 = E[X^2] - E[X]^2$$
+Then we define the **Chebyshev's Inequality**: 
+$$P(|X-E[X]|\ge k\sigma) \le \frac{1}{k^2}$$
+# Chernoff's Bound (CB)
+In probability theory, a Chernoff bound is an exponentially decreasing upper bound on the tail of a random variable based on its moment generating function. 
+The minimum of all such exponential bounds forms the Chernoff Bound, which may decay faster than exponential.
+It is especially useful for sums of independent random variables. 
+
+Let's consider a set of independent identically distributed (*iid*) variables $Y_i \in [0,1]$
+- $Y = \Sigma_{i=1}^nY_i$ 
+- $\mu = E[Y]$
+
+Then we have the following rules, the Chernoff's Bound: 
+$$
+\begin{align}
+& P(Y > \mu + \lambda) \le e^{-\frac{\lambda^2}{2\mu+\lambda}} \\
+& P(Y < \mu -\lambda) \le e^{-\frac{\lambda^2}{3\mu}}
+\end{align}
+$$
+where $\lambda$ our slack parameter.
 # Load Balancing
+Consider $m$ servers and $n$ jobs $(0,\dots,n-1)$, with $n >> m$
+We define a **fair load:** $\frac{m}{n}$ jobs per server. 
+
+Objectives of a good load balancing strategy
+- **transparency:** open source code, the mechanism is known but it can't be shut down
+- **persistence:** job $i$ always go to a small group of servers, to exploit caching, locality, ...
+- **fairness:** get the average fair load for each machine
+
+Randomly choose an hash function $h \in \mathcal{H}$.
+Using $h$ so that we have job $i\rightarrow$ server $h(i)$ gives a fair load
+$$
+\begin{align}
+&X_j=[\text{load for machine $j$}] = [\text{number of jobs assigned to server j}]\\
+\end{align}
+$$
+Let's also define the variable $X_{ij}$
+$$
+X_{ji} = 
+\begin{cases}
+1\ \text{if job $i$ is assigned to server $j=h(i)$, with $p =\frac{1}{m}$}\\
+0\ \text{otherwise}
+\end{cases}
+$$
+So we can compute
+$$
+\begin{align}
+& X_j = \Sigma_{i=0}^{n-1}\ X_{ji} \\
+& E[X_j] = \Sigma_{i=0}^{n-1}E[X_{ji}] = \Sigma_{i=0}^{n-1}\ P(X_{ji}=1) = \frac{n}{m}\ \square
+\end{align}
+$$
+**What about the max load?** 
+Let's remember two rules that we will apply in the computation of the max load
+- $P(X_{ji} = 1\land \dots\land X_{ji'}=1) = P(X_{ji'} = 1)P(X_{ji'} = 1) = P(h(j) = i)P(h(j)=i')$ as $h\in \mathcal{H}$ is two-way independent
+- given indicator variable $X, Y, Z$ pair-wise independent, we have $\sigma^2(X+Y+Z)=\sigma^2(X) + \sigma^2(Y) + \sigma^2(Z)$ 
+
+From the previous two points we can say that $$\sigma^2(X_j) = \Sigma_{i=0}^{n-1}\ \sigma^2(X_{ji})\ \star$$Now, we have: 
+$$
+\begin{align}
+\sigma^2 &= E[X_j^2] - E[X_j]^2 \\
+&= \star\ \Sigma_{i=0}^{n-1}E[X_{ji}^2] - \Sigma_{i=0}^{n-1}E[X_ji]^2 \\ 
+&= \Sigma_{i=0}^{n-1}(E[X_{ji}^2] - E[X_{ji}]^2)\\
+&= n(\frac{1}{m}-\frac{1}{m^2})\ \bigstar
+\end{align}
+$$
+Where $\bigstar$ is obtained because: 
+- $E[X^2_{ji}] = E[X_{ji}] = \frac{1}{m}$ by definition of random indicator variables
+- $E[X_{ji}]^2 = (\frac{1}{m})^2 = \frac{1}{m^2}$ 
+
+Hence we have $\sigma = \sqrt{n(\frac{1}{m}-\frac{1}{m^2})}$
+
+Let's now set $k = \sqrt{2m}$ and use the Chebyshev's Inequality $P(|X-E[X]|\ge k\sigma) \le \frac{1}{k^2}$: 
+$$
+\begin{align}
+P(|X_j-\frac{n}{m}|\ge\sigma\sqrt{2m}) \le \frac{1}{2m}
+\end{align}
+$$
+But since $\sigma\sqrt{2m} = \sqrt{2m \cdot  n(\frac{1}{m}-\frac{1}{m^2})}\sim \sqrt{2n}$, we get: 
+$$P(|X_j - \frac{n}{m}|\ge\sqrt{2n}) \le\frac{1}{2m}\ \diamondsuit$$
+
+Then we can compute the following probability: 
+$$
+\begin{align}
+P(max_j\ |X_j - \frac{n}{m}|\le \sqrt{2n}) &= \\
+&= 1 - [P(\exists j: |X_j - \frac{n}{m}|\ge\sqrt{2})] \\
+&=  1 - [\Sigma_{j=1}^{m-1}P(\exists j: |X_j - \frac{n}{m}|\ge\sqrt{2})]_\sim,\ \text{UB}\\
+&= 1 - [\Sigma_{j=0}^{m-1}\frac{1}{2m}]_\sim,\ \text{CI} \\
+&= 1 - [\frac{1}{2}]_\le \\
+&\ge\frac{1}{2}
+\end{align}
+$$
+The $\ge \frac{1}{2}$, given by the $\sim$, is bound to the fact that: 
+$$P(\exists j: |X_j - \frac{n}{m}|\ge\sqrt{2})\ \le_{\text{UB}}\ \Sigma_{j=1}^{m-1}P(\exists j: |X_j - \frac{n}{m}|\ge\sqrt{2})\ \le_{\text{CI}}\ \Sigma_{j=0}^{m-1}\frac{1}{2m} = \frac{1}{2} $$
+**In words:** the max load of a given machine is at most $\frac{n}{m}+\sqrt{2n}$ with a probability $\ge \frac{1}{2}$
+
+We can now also apply the Chernoff's Bound (CB) $P(\gamma > \mu+\lambda) = e^{-\frac{\lambda^2}{2\mu+\lambda}}$,
+where we set:
+- $n = m$
+- $\mu = E[X_j] = \frac{n}{m} = 1$
+- $\gamma = X_j$
+- $\lambda = 6\log(n)$
+
+And we have: 
+$$P(X_j \ge \frac{n}{m}+6\log(n)) \le e^{-\frac{(6\log n)^2}{2\frac{n}{m}+6\log(n)}} \le \ e^{-3\log(n)} = \frac{1}{n^3}\diamondsuit,\ \text{w.h.p}$$
+So that we can compute
+$$
+P(max_j\ X_j \le \frac{n}{m}+6\log(n)) = 1 - \Sigma_{j=1}^m\diamondsuit\ge1 -n\cdot\frac{1}{n^3} = 1 - \frac{1}{n^2}
+$$
+which bounds the max load. 
+# Document Resemblance
+Given a set $X$ of elements, we have $|X|!$ permutations. 
+For example: $X = \{a,b,c\}$ has $3! = 6$ permutations: $abc, acb, \dots, cba$
+Each permutation **induces an order**, for example $cab\implies c < a < b$.
+
+We take the minimum of a permutation. 
+Say that $h(x)$ is a permutation of $X$, then we want 
+$$min\ h(x) = arg\_min_{a\in X}\ h(a)$$
+**Said easy:** $min\ h(x)$ returns the $x\in X$ for which $h(x)$ is minimum.
+
+Consider a set $X\subseteq U$, and permutation $h:U \rightarrow [|U|]$.
+We say a that a *permutation* family $\mathcal{H} = \{h:X\rightarrow [|X|],\ h\ \text{bijective}\}$ is **min-wise independent** if 
+$$\forall X\subseteq U.\forall a\in X. P_{h\in\mathcal{H}}(a=min\ h(x)) = \frac{1}{|X|}$$**in words:** every element has the same probability of being the minimum. 
+
+We like the previous property because of **Jaccard's Index for Similarity**. 
+We can see a document as a (multi)set of ("lemmatized") words. 
+So, given $U$ the set of all the possible words, consider two subsets $A, B \subseteq U$.
+We define the Jaccard's Index as 
+$$0\le J(A,B) = \frac{|A\cap B|}{|A \cup B|}\le1$$
+After sorting $A,B$ computing $J(A,B)$ takes $O(|A|+|B|)$ time. 
+In the big data context this is way too much. 
+We use **min-hash** to solve this problem.
+
+**Interesting property:**
+$$\forall A, B\ . P_{h\in\mathcal{H}}(min\ h(A) = min\ h(B)) = J(A,B)$$
+**proof:**
+Consider the set $X = A \cup B$, with $|X| = r + b+ g$. ![[Pasted image 20231122100821.png | center|  300]]So, we have that: 
+- $r = |A/B|$
+- $b = |A\cap B|$
+- $g= |B/A|$ 
+- $|A| = r + b$
+- $|B| = b+g$
+- $|A \cap B| = b$
+- $|A \cup B| = r + b + g$
+
+Then:  
+$$
+\begin{align}
+P(min\ h(A) = min\ h(B)) &= \\
+&= P(\exists y\in A\cap B:y = min\ h(X)) \\ 
+&\le \Sigma_{y\in A\cap B}\ P(y = min\ h(x)), \text{UB}\\
+&= \Sigma_{y\in A\cap B}\ \frac{1}{|X|}, \text{by def of $h\in \mathcal{H}$}\\
+&= \frac{b}{r+b+g} \\ 
+&= \frac{|A\cap B|}{|A \cup B|} \\
+&= J(A,B) 
+\end{align}
+$$ 
+As said, the problem is that computing $J(A,B)$ as we can't explicitly store the permutation of $U$ as $|U|$ is huge.
+**TODO:** WHY IS THIS TOO HARD, WHERE I NEED THE PERMS OF U
+
+It has been shown that we can "safely" replace the permutation family $\mathcal{H}$ with our universal family $\mathcal{H}$. 
+We randomly choose $k$ hash function and, given $A$, we define the **sketch** $S(A)$: 
+$$S(A) = \langle min\ h_1(A),\dots,\ min\ h_k(A)\rangle$$
+Then we can define the **approximate Jaccard's Index**
+$$J_\sim(A,B) = \frac{|S(A)\cap S(B)\cap S(A\cup B)|}{|S(A\cup B)|}$$
+Given $S(A), S(B)$, the $J_\sim(A,B)$ can be computed in $O(k)$ time: 
+1) compute 
 
