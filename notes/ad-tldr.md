@@ -1,4 +1,6 @@
-# Algorithm Design 22/23
+# <p style="text-align:center;">Algorithm Design</p>
+<p style="text-align:center;">Giulio Paparelli, AY 22/23</p>
+<p style="text-align:center;"><b>Use at Your Own Risk</b></p>
 
 ## Mathematical Background
 ### Counting
@@ -980,28 +982,35 @@ $$
 P(max_j\ X_j \le \frac{n}{m}+6\log(n)) = 1 - \Sigma_{j=1}^m\diamondsuit\ge1 -n\cdot\frac{1}{n^3} = 1 - \frac{1}{n^2}
 $$
 which bounds the max load. 
+# Azuma-Hoeffding Bound (AH)
+Consider $X_1,\dots,X_k$ *i.i.d* random vars, with 
+$$\mu = E[\frac{\Sigma_{i=1}^kX_i}{k}]
+$$
+and with $a_i \le X_i \le b_i$
+Then we have the Azuma-Hoeffding Bound: $$P(|Y -\mu|\ge \epsilon) \le 2e^{-\frac{2k^2\epsilon^2}{\Sigma_{i=1}^k(b_i-a_i)^2}}$$
 # Document Resemblance
 Given a set $X$ of elements, we have $|X|!$ permutations. 
 For example: $X = \{a,b,c\}$ has $3! = 6$ permutations: $abc, acb, \dots, cba$
-Each permutation **induces an order**, for example $cab\implies c < a < b$.
 
-We take the minimum of a permutation. 
-Say that $h(x)$ is a permutation of $X$, then we want 
-$$min\ h(x) = arg\_min_{a\in X}\ h(a)$$
-**Said easy:** $min\ h(x)$ returns the $x\in X$ for which $h(x)$ is minimum.
+Each permutation **induces an order**, for example $cab\implies c < a < b$.
+**We define the minimum of a permutation as the first element of the permutation.** 
+Alternatively said, each permutation can be seen as a ranking of $X$. 
 
 Consider a set $X\subseteq U$, and permutation $h:U \rightarrow [|U|]$.
-We say a that a *permutation* family $\mathcal{H} = \{h:X\rightarrow [|X|],\ h\ \text{bijective}\}$ is **min-wise independent** if 
-$$\forall X\subseteq U.\forall a\in X. P_{h\in\mathcal{H}}(a=min\ h(x)) = \frac{1}{|X|}$$**in words:** every element has the same probability of being the minimum. 
+We say a that a *permutation* family $\mathcal{H} = \{h:X\rightarrow [|X|],\ h\ \text{bijective}\}$ is **min-wise independent** if $$\forall X\subseteq U.\forall a\in X. P_{h\in\mathcal{H}}(a=min\ h(x)) = \frac{1}{|X|}$$**in words:** every element has the same probability of being the minimum. 
 
-We like the previous property because of **Jaccard's Index for Similarity**. 
+Say that $h(X)$ is a permutation of $X$, then we want 
+$$min\ h(X) = arg\_min_{a\in X}\ h(a)$$
+**Said easy:** $min\ h(X)$ returns the $a\in X$ for which $h(a)$ is minimum.
+
+We like the min-wise independency property because of **Jaccard's Index for Similarity**. 
 We can see a document as a (multi)set of ("lemmatized") words. 
 So, given $U$ the set of all the possible words, consider two subsets $A, B \subseteq U$.
+$A, B$ are two files, and they can be seen as a $k$-permutation of $U$. 
 We define the Jaccard's Index as 
 $$0\le J(A,B) = \frac{|A\cap B|}{|A \cup B|}\le1$$
 After sorting $A,B$ computing $J(A,B)$ takes $O(|A|+|B|)$ time. 
-In the big data context this is way too much. 
-We use **min-hash** to solve this problem.
+In the context of Big Data, where $A, B$ are enormous, this is a no go. 
 
 **Interesting property:**
 $$\forall A, B\ . P_{h\in\mathcal{H}}(min\ h(A) = min\ h(B)) = J(A,B)$$
@@ -1024,17 +1033,88 @@ P(min\ h(A) = min\ h(B)) &= \\
 &= \Sigma_{y\in A\cap B}\ \frac{1}{|X|}, \text{by def of $h\in \mathcal{H}$}\\
 &= \frac{b}{r+b+g} \\ 
 &= \frac{|A\cap B|}{|A \cup B|} \\
-&= J(A,B) 
+&= J(A,B)\ \clubsuit
 \end{align}
-$$ 
-As said, the problem is that computing $J(A,B)$ as we can't explicitly store the permutation of $U$ as $|U|$ is huge.
-**TODO:** WHY IS THIS TOO HARD, WHERE I NEED THE PERMS OF U
+$$
+**Computing Jaccard is way too expensive as it requires sorting, and even after sorting is still very slow for big data problem.** 
+To attack this problem we use the **k-min hash** technique. 
 
 It has been shown that we can "safely" replace the permutation family $\mathcal{H}$ with our universal family $\mathcal{H}$. 
-We randomly choose $k$ hash function and, given $A$, we define the **sketch** $S(A)$: 
-$$S(A) = \langle min\ h_1(A),\dots,\ min\ h_k(A)\rangle$$
-Then we can define the **approximate Jaccard's Index**
-$$J_\sim(A,B) = \frac{|S(A)\cap S(B)\cap S(A\cup B)|}{|S(A\cup B)|}$$
-Given $S(A), S(B)$, the $J_\sim(A,B)$ can be computed in $O(k)$ time: 
-1) compute 
+We then can take $h_1,\dots,h_k \in \mathcal{H}$, where we know that $\forall h_i. \clubsuit$ holds
 
+We compute the **sketches** of $A$, and $B$: 
+- $S(A): \{ min\ h_1(A),\dots,\ min\ h_k(A)\}$
+- $S(B): \{ min\ h_1(B),\dots,\ min\ h_k(B)\}$
+
+And we define the **approximate Jaccard's Index**
+$$J_\sim(A,B) = \frac{|S(A)\cap S(B)\cap S(A\cup B)|}{|S(A\cup B)|}$$
+Given $S(A), S(B)$, computing $J_\sim(A,B)$ takes $O(k)$ time, which is much faster than computing $J(A,B)$. 
+The price to pay is obvious: **it is an approximation.**
+
+**How good of an approximation?**
+Consider $A, B$, and $k$ hash functions in $\mathcal{H}$. 
+Let's define an indicator variable 
+$$X_i = \begin{cases}
+1\ \text{if $min\ h_i(A) = min\ h_i(B)$, with probability $p = J(A,B)$}\\
+0\ \text{otherwise}
+\end{cases}$$
+$X_i$ tells us if the minimum using $h_i$ on $A$ and $B$ is the same, aka if they have the permutations have the same first element. 
+Summing $X_i$ for every $i \in [k]$ tells us how many times the minimums are the same. 
+Then, as always for indicator variables, we have that $E[X_i] = J(A,B)$. 
+
+Let's define $$Y = \frac{\Sigma_{i=1}^k X_i}{k}$$which is an **unbiased estimator** for $J(A,B)$. 
+An estimator of a given parameter is said to be **unbiased** if its expected value is equal to the true value of the parameter.
+In other words, an estimator is unbiased if it produces parameter estimates that are on average correct:
+$$E[Y] = \frac{\Sigma_{i=1}^kE[X_i]}{k} = \frac{k\cdot J(A,B)}{k} = J(A,B)$$
+
+**Is this k-min-hash technique any good to compute the document resemblance?**
+Let's define a variable 
+$$
+\begin{align}
+Y' &= \Sigma_{i=1}^k X_i\\ 
+&\implies \\
+Y' &= kY \\
+\mu &= E[Y] \\
+\mu' &= E[Y'] = k\cdot E[Y] = k\cdot J(A,B) \\
+\end{align}
+$$
+Using the **CB**, we have 
+$$
+\begin{align}
+P(|Y-\mu|\ge\epsilon\mu) &= \\
+&= P(|Y'-\mu'|\ge\epsilon\mu'),\ \text{multiplied by $k$}\ \heartsuit \\
+&\le 2\cdot e^{-\frac{\epsilon^2\mu'}{3}},\ \text{CB} \\
+&= 2e^{-\frac{\epsilon^2k\mu}{3}},\ \bigstar
+\end{align}
+$$
+$\heartsuit:$ if we multiply by a constant the event are the same, therefore they have the same probability. 
+
+$\bigstar:$ This tells that $|Y - \mu|$ (how $Y$ and its expected value $\mu$ are distant) is equal or greater than $\epsilon\mu$ with that probability.
+**Is this good?** 
+We **want to bound this probability** by a $\delta < 1$. 
+Then we have 
+$$
+2e^{-\frac{\epsilon^2k\mu}{3}} < \delta \implies k = O(\epsilon^{-2}\log(\delta^{-1})\mu^{-1})
+$$
+but we know that $\mu = J(A,B) = \frac{|A\cap B|}{|A \cup B|}$, then $\mu^{-1} \sim |A|+|B|$ for $A,B$ very different from each other. 
+Then, to limit the probability we have to take $k$ hash functions, with $k$ large as $|A|+|B|$, which is very bad.
+
+Let's try to bound that probability with another tool.
+**We use the Azuma-Hoeffding Bound**: $P(|Y -\mu|\ge \epsilon) \le 2e^{-\frac{2k^2\epsilon^2}{\Sigma_{i=1}^k(b_i-a_i)^2}}$
+In this case:
+- $X_i \in [a_i =0, b_i=1]$
+- $\mu = E[\frac{\Sigma_{i=1}^kX_i}{k}]$, where $\frac{\Sigma_{i=1}^kX_i}{k}$ is our $Y$
+
+Then: 
+$$
+P(|Y -\mu|\ge \epsilon) \le 2e^{-\frac{2k^2\epsilon^2}{k}} \star = 2e^{-2k\epsilon^2}
+$$
+$\star: a_i = 0, b_i = 1 \implies \Sigma_{i=1}^{k}(b_i-a_i)^2 = k$
+
+And we want to limit that probability with $\delta$: 
+$$2e^{-2k\epsilon^2} \le \delta \implies k= O(\epsilon^{-2}\log(\delta^{-1}))$$
+Which is good, $\square$
+
+*the application of this technique, the network analysis, is skipped.*
+# Count-Min Sketches for Frequent Elements
+**TODO**
