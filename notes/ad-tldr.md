@@ -574,7 +574,7 @@ Now, consider the set $S$ of keys and the hash functions $h_1, h_2$.
 Conceptually we build an undirected graph $G=(V,E)$ where $|V|=m$ and $|E|=n$, and:
 - the **vertices** are in $V = \{0,1,\dots,m-1\}$ and represent the table positions
 - the **edges** are random: $E = \{(h_1(x), h_2(x)) : x \in S\}$ 
-	- $G$ is actually a multigraph: two vertices can be connected by multiple edges. 
+	- $G$ is actually a **multigraph**: two vertices can be connected by multiple edges. 
 
 **Consider the insertion** of a new key $x$, which corresponds to a new edge $e = (h_1(x), h_2(x))$ in $G$. 
 At this point one of three situations may happen: 
@@ -1204,3 +1204,140 @@ P(F_\sim[i]> F[i]+\varepsilon||F||) &= \\
 $$
 $\heartsuit$: $F_\sim[i]$ is a minimum operation over the rows of $T$: it has to be verified for every cell!
 which proves $\bigstar$, $\square$ 
+# Randomized Min-Cut Algorithm for Graphs
+Consider a **(multi)graph** $G = (V,E)$ (there may be multiple edges between same nodes),
+where: 
+- $|V| = n$
+- $|E| = m$
+
+We define the **cut of the graph**
+$$
+C = (V_1, V_2)\ \text{where}\ V_1 \cap V_2 = \emptyset,\ V_1 \cup V_2 = V
+$$
+And we call such $V_1$ and $V_2$ partitions of the graph $G$. 
+
+We then define a **cut-set:** $$E(V_1, V_2) = \{uv\in E: (u\in V_1 \land v\in V_2) \lor (u\in V_2 \land v\in V_1)\}$$A cut-set is the set of edges that goes from a partition $V_1$ to a partition $V_2$ of a cut (or vice-versa). 
+Mind that we will often represent $E(V_1,V_2)$ as $E(C)$.
+
+The previous definitions are useful to partition the graph $G$ into subgraphs.
+We define the **node induced graph**
+$$G[V_i] = \{uv\in E: u,v\in V_i\}$$
+And the **subgraph induced by the cut-set**$$G[E(V_1,V_2)] = (V_{12}, E(V_1,V_2))$$where $V_{12} = \{u\in V: uv\in E(V_1,V_2)\}$
+
+**Said easy,** given a graph $G$ and and a cut $C = (V_1, V_2)$ we have:
+- **node induced graph:** a graph where every vertex $v$ is in $V_1$ and every edge only connect vertexes of $V_1$ 
+- **subgraph induced by the cut-set**: a graph where every vertex $u \in V_1$ has at least one edge that connect it to a vertex $v$ of the other partition $V_2$
+
+Every cut $C = (V_1, V_2)$ divides a graph $G$ in three parts: 
+1) $G[V_1]$
+2) $G[V_2]$
+3) $G[E(V_1,V_2)]$
+
+**Computing the size** **of the subgraph induced by the cut-set** is a problem: 
+- computing the lower bound of the size takes polynomial time
+- computing the upper bound of the size is NP-hard
+
+We say that the cut $C=(V_1,V_2)$ is a **min-cut** if $$\forall C'.|E(C)|\le |E(C')|$$**Said easy:** the min-cut is the cut with the least amount of edges.
+
+**Observation:** the min-cut is not unique.
+**Observation:** $\forall v\in V.|E(c)|\le\ deg(v)$, as otherwise we could choose a smaller cut-set
+(remember that $deg(v)$ is the degree of a vertex $v$, the number of edges from/to $v$)
+
+**Edge Contraction:**
+Consider an edge $uv\in E$.
+We define the graph $G/uv = (V',E')$ where: 
+- $V' = V-\{u,v\}\cup \{\overline{uv}\}$ 
+- $E' = E - \{uv\}\cup \{\overline{uv}z : uz\in E \lor vz \in E\}$ 
+
+Contracting the edge $uv$ means to merge the node $u$ and the node $v$ in a single node $\overline{uv}$, and then substitute all the edges where either $u$ or $v$ appear with edges of $\overline{uv}$.
+**Intuition:** when performing the edge contraction with $\{u,v\}$, we are saying that $u,v$ belong to the same "side" of the cut.
+
+**Relation between Edge Contractions and Cuts**:
+Consider a **connected graph** (every two vertices are connected by an edge) $G$. 
+**Theorem A:** 
+Any sequence of edge contractions leaving just $2$ nodes gives a cut $C(V_1,V_2)$
+**Proof:**
+We prove it by induction on the number $n$ of nodes: 
+- **base case:** $n=2$
+	- $V_1 = \text{one node}$
+	- $V_2 = \text{the other node}$
+	- we obtain the cut $C=(V_1,V_2)$
+- **inductive case:** $n>2$
+	- we assume that with $n-1$ nodes the theorem is true and we want to prove that with $n$ nodes it takes a certain number of contractions to obtain a cut
+	- we make an edge contraction and we are left with a graph with one less node than before: the graph has now $n-1$ nodes
+	- with $n-1$ node we obtain a cut with a series of contraction by inductive hypothesis
+
+**Theorem B:**
+Given a cut $C=(V_1, V_2)$, it does not necessarily exists a sequence of edge contractions that leads to just $2$ nodes. 
+**Proof:**
+![[IMG_0357.png | center | 600]]
+$\spadesuit:$ here we cannot apply any edge contraction that keeps this $2$-colored (gives a cut). 
+Clearly, by the previous theorem, we can obtain another $2$-coloring.
+
+---
+We can now define **the algorithm** that "guesses" the min-cut of a graph $G$:
+```
+GuessMinCut(G) {
+	while(|V(G)| > 2)
+		1) choose uniformly and randomly any edge uv in E
+		2) G = G - uv
+	return |E(G)|
+}
+```
+Where: 
+- how we choose an edge $uv \in E$? 
+	- choose $u$ with probability $\frac{deg(u)}{2m}$ ($2m$, the graph is connected!)
+	- choose $v \in V(u)$ with probability $\frac{1}{deg(u)}$ 
+- $|E(G)|$ is the number of multiple edges when only two nodes remain 
+
+**When the previous algorithm fail?**
+When an edge $uv$ is **bad**, which is a edge $uv \in E(C)$ for every min-cut $C$. 
+In other words, $uv$ belongs to all the min-cut sets!
+This is clear: `GuessMinCut` cannot find the min-cut when it removes an edge that belongs to every min-cut.
+
+Let $k = |E(C)|$ be the size of min cut-set. 
+**Proposition:** 
+There are at most $k$ bad edges in $G$. 
+**Proof:** 
+We defined $k = |E(C)|$, which is the number of edges in the min-cut.
+The number of bad edges is the number of the shared edges within every min-cut, by definition of bad edges. 
+At most we could share $k$ edges, but two solutions that have the same edges are the same solution (cut).
+So, there are at most $k$ bad edges, $\square$
+
+So we have that 
+$$P(uv\ \text{is bad}) \le \frac{k}{m}\ \bigstar$$We also know that: 
+$$
+\begin{cases}
+\clubsuit\ \Sigma_{u\in V}\ deg(u) = 2m\\ 
+\spadesuit\ \forall u \in V: deg(u)\ge k 
+\end{cases} \implies 
+(\heartsuit\ 2m\ge nk \iff m \ge \frac{nk}{2})
+$$
+where: 
+- $\clubsuit$ In a non oriented graph is it true that the sum of the degree of the vertexes is $2m$ since we count the edge $uv$ twice: in the degree of $u$ and in the degree of $v$ 
+- $\spadesuit$ Every node as degree $\ge k$, otherwise the min cut-size would be smaller than $k$. Alternatively said: otherwise I would color only one node and I would have less than $k$ edges towards the other partition, and the min-cut would be smaller than $k$
+- Thanks to $\clubsuit, \spadesuit$ I obtain $\heartsuit$, which is true if and only if $m \ge \frac{nk}{2}$
+
+So we can use the last point in $\bigstar$
+$$
+P(uv\ \text{is bad}) \le \frac{k}{m}\ \le \frac{2}{nk}\cdot k = \frac{2}{n}
+$$
+**note:** this argument holds for multi-edges as $deg(u)$ takes into account their multiplicities. 
+
+We then have: 
+$$
+\begin{align}
+& P(n) = \text{probability that GuessMinCut(G) correctly finds a min-cut in a graph G with n nodes} \\ 
+& P(n) \ge \begin{cases}1, \text{with}\ n=2 \\ \star\ (1-\frac{2}{n})\cdot P(n-1),\ \text{with}\ n>2  \end{cases}
+\end{align}
+$$
+Where in the case $\star$ we have: 
+- $1-\frac{2}{n}$ is the probability that the chosen edge is nod a bad edge
+- $(1-\frac{2}{n})\cdot P(n-1)$ is obtained by the formula $P(A \cap B) = P(A) \cdot P(B|A)$ 
+	- $P(n-1)$ is the conditional probability given the choice of $uv$
+
+We can expands $P(n)$ recursively, where remember that $1-\frac{2}{n} = \frac{n-2}{n}$
+$$P(n) \ge (\frac{n-2}{n})\cdot (\frac{n-3}{n-1})\cdot(\frac{n-4}{n-2})\cdot\cdot\cdot \frac{1}{3}\cdot 1 = \frac{(n-2)!}{n!/2} = \frac{2}{n(n-1)}$$
+Which is not great, but can be boosted. 
+# Approximation in Fine-Grained Algorithms
+
